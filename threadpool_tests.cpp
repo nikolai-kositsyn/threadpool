@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <string>
 
-#include "thread_pool.hpp"
+#include "threadpool.hpp"
 
 using namespace threading;
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(threadpool)
+project(threadpool, VERSION 0.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -17,9 +17,8 @@ ELSEIF("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
 	ELSE()
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g1")
 	ENDIF()	
-ELSE()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g")
-	message("Undefined build type... Debug options will be used")
+ELSE()	
+	message("Undefined build type... The default 'CMAKE_CXX_FLAGS' will be used")
 ENDIF()
 
 
@@ -41,9 +40,9 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing()
 
-add_executable(thread_pool_tests thread_pool_tests.cpp thread_pool.hpp)
+add_executable(threadpool_tests threadpool_tests.cpp threadpool.hpp)
 
-target_link_libraries(thread_pool_tests gtest_main)
+target_link_libraries(threadpool_tests gtest_main)
 
 include(GoogleTest)
-gtest_discover_tests(thread_pool_tests)
+gtest_discover_tests(threadpool_tests)

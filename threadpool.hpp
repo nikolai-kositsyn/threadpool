@@ -1,17 +1,26 @@
+#pragma once
+
 #include <thread>
 #include <mutex>
 #include <atomic>
 #include <future>
 #include <memory>
-#include <algorithm>
 #include <deque>
 #include <list>
-
+#include <algorithm>
 
 using namespace std;
 
 namespace threading
 {
+	#define USE_LOG_POOL
+
+	#ifdef USE_LOG_POOL
+	#define LOG_POOL(...) cout << __VA_ARGS__ << endl;
+	#else
+	#define LOG_POOL(...)
+	#endif
+
 	template <typename T>
 	struct func_traits { };
 
@@ -19,11 +28,7 @@ namespace threading
 	struct func_traits<R(Args...)>
 	{
 		using RetType = R;
-	};
-
-	template<typename T>
-	struct type_display_helper;
-	
+	};	
 
 	using task_type = function<void()>;
 
@@ -119,11 +124,21 @@ namespace threading
 			{
 				lock_guard<mutex> lock(_mutex);
 				_thread_func_finished = true;
-				cout << get_id() << " | finish flag set" << endl;
+
+				#ifdef USE_LOG_POOL
+					stringstream msg;
+					msg << "worker:" << get_id() << " | finish flag set";
+					LOG_POOL(msg.str());
+				#endif
 			}
 
 			_cond.notify_one();
-			cout << get_id() << " | finish cond.notify()" << endl;
+
+			#ifdef USE_LOG_POOL
+				stringstream msg;
+				msg << "worker:" << get_id() << " | finish cond.notify()";
+				LOG_POOL(msg.str());
+			#endif			
 		}
 
 	public:
@@ -142,18 +157,23 @@ namespace threading
 			if (_thread.joinable())
 			{
 				constexpr auto WAIT_ATTEMPTS_COUNT = 10;
-				chrono::milliseconds SINGLE_WAIT_TIMEOUT_MS(200);
+				constexpr chrono::milliseconds SINGLE_WAIT_TIMEOUT_MS(200);
 
-				auto thread_id = get_id();
+				const auto thread_id = get_id();
 
 				/* Stop and waiting for timer */
-				for (auto attempt = 0; attempt < WAIT_ATTEMPTS_COUNT; ++attempt)
+				for (auto attempt = 1; attempt <= WAIT_ATTEMPTS_COUNT; ++attempt)
 				{
 					set_stop_timer_request();
 
 					if (wait_for_stop_timer_request(SINGLE_WAIT_TIMEOUT_MS))
 					{
-						cout << thread_id << " | timer wait Ok, attempt: " << attempt + 1 << endl;
+						#ifdef USE_LOG_POOL
+							stringstream msg;
+							msg << "worker:" << thread_id << " | timer waited successfully, attempt:" << attempt;
+							LOG_POOL(msg.str());
+						#endif
+
 						break;
 					}
 				}	 
@@ -162,14 +182,19 @@ namespace threading
 				_stop_request = true;
 
 				unique_lock<mutex> lock(_mutex);
-				for (auto attempt = 0; attempt < WAIT_ATTEMPTS_COUNT; ++attempt)
+				for (auto attempt = 1; attempt <= WAIT_ATTEMPTS_COUNT; ++attempt)
 				{
 					_queue.notify_all_workers();
 					
 					auto waitStatus = _cond.wait_for(lock, SINGLE_WAIT_TIMEOUT_MS);
 					if (waitStatus == cv_status::no_timeout)
 					{
-						cout << thread_id << " | worker wait Ok, attempt: " << attempt + 1 << endl;
+						#ifdef USE_LOG_POOL
+							stringstream msg;
+							msg << "worker:" << thread_id << " | waited successfully, attempt:" << attempt;
+							LOG_POOL(msg.str());
+						#endif
+						
 						break;
 					}						
 				}
@@ -177,14 +202,33 @@ namespace threading
 				if (_thread_func_finished)
 				{
 					_thread.join();
-					cout << thread_id << " | joined with wait" << endl;
+
+					#ifdef USE_LOG_POOL
+						stringstream msg;
+						msg << "worker:" << thread_id << " | joined with wait";
+						LOG_POOL(msg.str());
+					#endif					
 				}
 				else
 				{
 					/* Detaching worker thread... something went wrong */
-					cout << thread_id << " | going to 'detach' worker thread... something went wrong" << endl;
+					#ifdef USE_LOG_POOL
+						{
+							stringstream msg;
+							msg << "worker:" << thread_id << " | going to 'detach' thread... something went wrong";
+							LOG_POOL(msg.str());
+						}
+					#endif
+					
 					_thread.detach();
-					cout << thread_id << " | detached" << endl;
+
+					#ifdef USE_LOG_POOL
+						{
+							stringstream msg;
+							msg << "worker:" << thread_id << " | detached";
+							LOG_POOL(msg.str());
+						}
+					#endif
 				}
 			}
 		}

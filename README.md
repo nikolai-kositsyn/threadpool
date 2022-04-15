@@ -1,3 +1,11 @@
+[![Ubuntu](https://github.com/nikolai-kositsyn/threadpool/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/nikolai-kositsyn/threadpool/actions/workflows/ubuntu.yml)
+
+[![CodeQL](https://github.com/nikolai-kositsyn/threadpool/actions/workflows/codeql.yml/badge.svg)](https://github.com/nikolai-kositsyn/threadpool/actions/workflows/codeql.yml)
+
+[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/nikolai-kositsyn/threadpool/main/LICENSE.txt)
+[![GitHub Downloads](https://img.shields.io/github/downloads/nikolai-kositsyn/threadpool/total)](https://github.com/nikolai-kositsyn/threadpool/releases)
+
+
 # C++ Thread Pool single header library
 
 ## General Description

@@ -13,13 +13,13 @@ using namespace std;
 
 namespace threading
 {
-	#define USE_LOG_POOL
+//#define USE_LOG_POOL
 
-	#ifdef USE_LOG_POOL
-	#define LOG_POOL(...) cout << __VA_ARGS__ << endl;
-	#else
-	#define LOG_POOL(...)
-	#endif
+#ifdef USE_LOG_POOL
+#define LOG_POOL(...) cout << __VA_ARGS__ << endl;
+#else
+#define LOG_POOL(...)
+#endif
 
 	template <typename T>
 	struct func_traits { };
@@ -28,12 +28,12 @@ namespace threading
 	struct func_traits<R(Args...)>
 	{
 		using RetType = R;
-	};	
+	};
 
 	using task_type = function<void()>;
 
 	class tasksqueue
-	{	
+	{
 		mutable mutex _mutex;
 		condition_variable _cond;
 		deque<task_type> _deque;
@@ -42,7 +42,7 @@ namespace threading
 		tasksqueue() = default;
 		~tasksqueue() = default;
 		tasksqueue(const tasksqueue& other) = delete;
-		tasksqueue(tasksqueue&& other) = delete;		
+		tasksqueue(tasksqueue&& other) = delete;
 
 		void push(task_type& task)
 		{
@@ -67,12 +67,13 @@ namespace threading
 					task = _deque.front();
 					_deque.pop_front();
 				}
-				
-			}else
+
+			}
+			else
 			{
 				task = _deque.front();
 				_deque.pop_front();
-			}			
+			}
 		}
 
 		size_t size() const noexcept
@@ -88,9 +89,9 @@ namespace threading
 	};
 
 	class worker
-	{	
+	{
 		tasksqueue& _queue;
-		
+
 		thread _thread;
 		mutex _mutex;
 		condition_variable _cond;
@@ -100,7 +101,8 @@ namespace threading
 		mutex _timer_mutex;
 		condition_variable _timer_cond;
 		bool _stop_timer_request = { true };
-		
+
+		atomic<bool> _is_busy = { false };
 
 		void run()
 		{
@@ -112,7 +114,11 @@ namespace threading
 
 				if (task != nullptr)
 				{
+					_is_busy.store(true, memory_order_relaxed);
+
 					task();
+
+					_is_busy.store(false, memory_order_relaxed);
 				}
 
 				if (_stop_request)
@@ -125,20 +131,20 @@ namespace threading
 				lock_guard<mutex> lock(_mutex);
 				_thread_func_finished = true;
 
-				#ifdef USE_LOG_POOL
-					stringstream msg;
-					msg << "worker:" << get_id() << " | finish flag set";
-					LOG_POOL(msg.str());
-				#endif
+#ifdef USE_LOG_POOL
+				stringstream msg;
+				msg << "worker:" << get_id() << " | finish flag set";
+				LOG_POOL(msg.str());
+#endif
 			}
 
 			_cond.notify_one();
 
-			#ifdef USE_LOG_POOL
-				stringstream msg;
-				msg << "worker:" << get_id() << " | finish cond.notify()";
-				LOG_POOL(msg.str());
-			#endif			
+#ifdef USE_LOG_POOL
+			stringstream msg;
+			msg << "worker:" << get_id() << " | finish cond.notify()";
+			LOG_POOL(msg.str());
+#endif			
 		}
 
 	public:
@@ -148,7 +154,7 @@ namespace threading
 
 		worker(tasksqueue& queue)
 			: _queue(queue)
-		{			
+		{
 			_thread = thread(&worker::run, this);
 		}
 
@@ -161,74 +167,74 @@ namespace threading
 
 				const auto thread_id = get_id();
 
-				/* Stop and waiting for timer */
+				/* Stop and waiting for a timer */
 				for (auto attempt = 1; attempt <= WAIT_ATTEMPTS_COUNT; ++attempt)
 				{
 					set_stop_timer_request();
 
 					if (wait_for_stop_timer_request(SINGLE_WAIT_TIMEOUT_MS))
 					{
-						#ifdef USE_LOG_POOL
-							stringstream msg;
-							msg << "worker:" << thread_id << " | timer waited successfully, attempt:" << attempt;
-							LOG_POOL(msg.str());
-						#endif
+#ifdef USE_LOG_POOL
+						stringstream msg;
+						msg << "worker:" << thread_id << " | timer waited successfully, attempt:" << attempt;
+						LOG_POOL(msg.str());
+#endif
 
 						break;
 					}
-				}	 
-				
-				/* Stop and waiting for worker thread */
+				}
+
+				/* Stop and waiting for a worker thread */
 				_stop_request = true;
 
 				unique_lock<mutex> lock(_mutex);
 				for (auto attempt = 1; attempt <= WAIT_ATTEMPTS_COUNT; ++attempt)
 				{
 					_queue.notify_all_workers();
-					
+
 					auto waitStatus = _cond.wait_for(lock, SINGLE_WAIT_TIMEOUT_MS);
 					if (waitStatus == cv_status::no_timeout)
 					{
-						#ifdef USE_LOG_POOL
-							stringstream msg;
-							msg << "worker:" << thread_id << " | waited successfully, attempt:" << attempt;
-							LOG_POOL(msg.str());
-						#endif
-						
+#ifdef USE_LOG_POOL
+						stringstream msg;
+						msg << "worker:" << thread_id << " | waited successfully, attempt:" << attempt;
+						LOG_POOL(msg.str());
+#endif
+
 						break;
-					}						
+					}
 				}
 
 				if (_thread_func_finished)
 				{
 					_thread.join();
 
-					#ifdef USE_LOG_POOL
-						stringstream msg;
-						msg << "worker:" << thread_id << " | joined with wait";
-						LOG_POOL(msg.str());
-					#endif					
+#ifdef USE_LOG_POOL
+					stringstream msg;
+					msg << "worker:" << thread_id << " | joined with wait";
+					LOG_POOL(msg.str());
+#endif					
 				}
 				else
 				{
 					/* Detaching worker thread... something went wrong */
-					#ifdef USE_LOG_POOL
-						{
-							stringstream msg;
-							msg << "worker:" << thread_id << " | going to 'detach' thread... something went wrong";
-							LOG_POOL(msg.str());
-						}
-					#endif
-					
+#ifdef USE_LOG_POOL
+					{
+						stringstream msg;
+						msg << "worker:" << thread_id << " | going to 'detach' thread... something went wrong";
+						LOG_POOL(msg.str());
+					}
+#endif
+
 					_thread.detach();
 
-					#ifdef USE_LOG_POOL
-						{
-							stringstream msg;
-							msg << "worker:" << thread_id << " | detached";
-							LOG_POOL(msg.str());
-						}
-					#endif
+#ifdef USE_LOG_POOL
+					{
+						stringstream msg;
+						msg << "worker:" << thread_id << " | detached";
+						LOG_POOL(msg.str());
+					}
+#endif
 				}
 			}
 		}
@@ -236,6 +242,11 @@ namespace threading
 		thread::id get_id() const noexcept
 		{
 			return _thread.get_id();
+		}
+
+		bool is_busy() const noexcept
+		{
+			return _is_busy;
 		}
 
 		void set_stop_timer_request() noexcept
@@ -263,17 +274,18 @@ namespace threading
 			}
 
 			return _stop_timer_request;
-		}		
+		}
 	};
 
 	struct pool_stat
 	{
 		size_t numOfThreads;
+		size_t numOfBusyThreads;
 		size_t numOfPendingTasks;
 	};
 
 	class threadpool
-	{	
+	{
 		tasksqueue _tasks_queue;
 		mutable mutex _mutex;
 		list<unique_ptr<worker>> _workers;
@@ -337,8 +349,8 @@ namespace threading
 
 
 		/**
-		 * @brief Configure the number of active worker threads in the pool.
-		 * @param numOfThreads Target number of threads.		 
+		 * @brief Configures the number of active worker threads in the pool.
+		 * @param numOfThreads Target number of threads.
 		 * By default that number is equal to the number of hardware threads (std::thread::hardware_concurrency()).
 		 */
 		void configure(size_t numOfThreads)
@@ -359,9 +371,9 @@ namespace threading
 
 
 		/**
-		 * @brief Returns the thread pool statistics info.		 
+		 * @brief Returns the thread pool statistics info.
 		 * @return 'pool_stat' structure instance which has the following info members:
-		 * 'numOfThreads' - Number of active worker threads 
+		 * 'numOfThreads' - Number of active worker threads
 		 * 'numOfPendingTasks' - Number of pending tasks in the internal queue
 		 */
 		pool_stat get_statistics() const noexcept
@@ -370,7 +382,15 @@ namespace threading
 
 			{
 				lock_guard<mutex> lock(_mutex);
+
 				stat.numOfThreads = _workers.size();
+				for (auto& worker : _workers)
+				{
+					if (worker->is_busy())
+					{
+						stat.numOfBusyThreads++;
+					}
+				}
 			}
 
 			stat.numOfPendingTasks = _tasks_queue.size();
@@ -380,10 +400,10 @@ namespace threading
 
 
 		/**
-		 * @brief Pushes function to execute it in the thread pool.
+		 * @brief Pushes the function to execute it in the thread pool.
 		 * @param func Target callable object to execute in pool.
 		 * @param args Arguments of callable object.
-		 * @return Instance of 'future' to wait and get result of asynchronous executing task in pool.		 
+		 * @return Instance of 'future' to wait and get result of asynchronous executing task in pool.
 		 */
 		template<typename F, typename... Types>
 		auto push_task(F&& func, Types&&... args) -> future<decltype(func(args...))>
@@ -399,7 +419,7 @@ namespace threading
 
 			return future;
 		}
-		
+
 
 		/**
 		 * @brief Pushes the member function to execute it in the thread pool.
@@ -440,9 +460,9 @@ namespace threading
 			auto future = promise.get_future();
 
 			task_type task([&]()
-			{
-				timer_func(promise, callback, interval, startDelay, singleShot);
-			});
+				{
+					timer_func(promise, callback, interval, startDelay, singleShot);
+				});
 
 			_tasks_queue.push(task);
 
@@ -464,6 +484,20 @@ namespace threading
 			if (workerItem != _workers.end())
 			{
 				workerItem->get()->set_stop_timer_request();
+			}
+		}
+
+		/**
+		 * @brief Waits for a finishing all pending tasks.
+		 */
+		void wait_for_all_tasks()
+		{
+			auto stat = get_statistics();
+
+			while (stat.numOfPendingTasks > 0 || stat.numOfBusyThreads > 0)
+			{
+				this_thread::yield();
+				stat = get_statistics();
 			}
 		}
 	};

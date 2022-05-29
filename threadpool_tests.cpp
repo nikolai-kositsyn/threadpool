@@ -20,7 +20,7 @@ TEST(pool, configure_test)
 	EXPECT_EQ(20, pool.get_statistics().numOfThreads);
 
 	pool.configure(0);
-	EXPECT_EQ(0, pool.get_statistics().numOfThreads);	
+	EXPECT_EQ(0, pool.get_statistics().numOfThreads);
 }
 
 TEST(pool, get_statistics_test)
@@ -55,7 +55,7 @@ TEST(pool, push_task_lambda_test)
 {
 	threadpool pool;
 
-	auto func_void = [] { };
+	auto func_void = [] {};
 
 	auto func_args = [](int x, int y, int z) { return x + y + z; };
 
@@ -180,6 +180,103 @@ TEST(pool, push_task_static_func_test)
 	EXPECT_EQ(6, callFuture.get());
 }
 
+TEST(pool, wait_for_all_tasks_test)
+{
+	/**
+	* The thread pool with default workers count ('thread::hardware_concurrency()')
+	*/
+	threadpool pool;
+
+	/**
+	* A lot of tasks try to modify a some shared object
+	*/
+	mutex objectMutex;
+	vector<size_t> sharedObject;
+	constexpr size_t TASKS_COUNT = 200;
+
+	auto modifySharedObjectTask = [&](const size_t dataItem)
+	{
+		{
+			lock_guard<mutex> lock{ objectMutex };
+			sharedObject.push_back(dataItem);
+		}
+
+		this_thread::sleep_for(chrono::milliseconds{ 1 });
+	};
+
+	for (auto i = 0; i < TASKS_COUNT; ++i)
+	{
+		pool.push_task(modifySharedObjectTask, i);
+	}
+
+	/**
+	* Waiting for a finishing all pending tasks in the pool
+	*/
+	auto startTime = chrono::high_resolution_clock::now();
+	pool.wait_for_all_tasks();
+
+	auto endTime = chrono::high_resolution_clock::now();
+	cout << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << endl;
+
+	size_t sharedObjectSize = 0;
+	{
+		lock_guard<mutex> lock{ objectMutex };
+		sharedObjectSize = sharedObject.size();
+	};
+
+	auto stat = pool.get_statistics();
+
+	EXPECT_EQ(TASKS_COUNT, sharedObjectSize);
+	EXPECT_EQ(thread::hardware_concurrency(), stat.numOfThreads);
+	EXPECT_EQ(0, stat.numOfBusyThreads);
+	EXPECT_EQ(0, stat.numOfPendingTasks);
+}
+
+TEST(pool, wait_for_all_future_results)
+{
+	/**
+	* The thread pool with default workers count ('thread::hardware_concurrency()')
+	*/
+	threadpool pool;
+
+	/**
+	* A lot of tasks run some operation
+	*/
+	constexpr size_t TASKS_COUNT = 200;
+
+	auto task = [&]()
+	{
+		this_thread::sleep_for(chrono::milliseconds{ 1 });
+	};
+
+	list<future<void>> futureResults;
+	for (auto i = 0; i < TASKS_COUNT; ++i)
+	{
+		auto futureResult = pool.push_task(task);
+		futureResults.push_back(move(futureResult));
+	}
+
+	/**
+	* Waiting for a finishing all pending tasks in the pool
+	*/
+	auto startTime = chrono::high_resolution_clock::now();
+	for (auto& futureResult : futureResults)
+	{
+		futureResult.wait();
+	}
+
+	auto endTime = chrono::high_resolution_clock::now();
+	cout << chrono::duration_cast<chrono::milliseconds>(endTime - startTime).count() << endl;
+
+	auto stat = pool.get_statistics();
+
+	EXPECT_EQ(thread::hardware_concurrency(), stat.numOfThreads);
+	EXPECT_EQ(0, stat.numOfBusyThreads);
+	EXPECT_EQ(0, stat.numOfPendingTasks);
+}
+
+
+/*	Threading Timers */
 struct TimerClientTestObject
 {
 	threadpool& _pool;
@@ -263,7 +360,7 @@ TEST(pool, push_singleshot_timer_test)
 	stream << timerThreadId;
 	EXPECT_TRUE(stoull(stream.str()) > 0);
 
-	// manual sleep for test purposes
+	/* manual sleep for test purposes */
 	this_thread::sleep_for(2 * startDelay);
 
 	EXPECT_TRUE(flag);

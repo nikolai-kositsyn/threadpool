@@ -1,90 +1,88 @@
 {
-    "version": 4,
+  "version": 3,
 
-    "configurePresets": 
-    [
-        {
-            "name": "win-debug",
-            "displayName": "win-debug",
-            "description": "win-debug build using Ninja generator",
-            
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
-            "cmakeExecutable": "cmake",
+  "configurePresets": [
+    {
+      "name": "win-debug",
+      "displayName": "win-debug",
+      "description": "win-debug build using Ninja generator",
 
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-              },
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cmakeExecutable": "cmake",
 
-            "cacheVariables": {
-                "CMAKE_C_COMPILER": "cl",
-                "CMAKE_CXX_COMPILER": "cl",
-                
-                "CMAKE_BUILD_TYPE":"Debug"
-            }
-        },
-        
-        {
-            "name": "win-release",
-            "displayName": "win-release",
-            "description": "win-release build using Ninja generator",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
 
-            "inherits":["win-debug"],            
-            
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE":"Release"
-            }
-        },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "cl",
+        "CMAKE_CXX_COMPILER": "cl",
 
-        {
-            "name": "linux-debug",
-            "displayName": "linux-debug",
-            "description": "linux-debug build using Ninja generator",
-            
-            "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build",
-            "cmakeExecutable": "cmake",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
 
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-              },
+    {
+      "name": "win-release",
+      "displayName": "win-release",
+      "description": "win-release build using Ninja generator",
 
-            "cacheVariables": {
-                "CMAKE_C_COMPILER": "gcc",
-                "CMAKE_CXX_COMPILER": "g++",
-                
-                "CMAKE_BUILD_TYPE":"Debug"
-            }
-        }
-    ],
+      "inherits": [ "win-debug" ],
 
-    "buildPresets": 
-    [
-        {
-            "name": "win-debug",
-            "displayName": "win-debug",
-            "description": "win-debug build using Ninja generator",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
 
-            "configurePreset": "win-debug"            
-        },
+    {
+      "name": "linux-debug",
+      "displayName": "linux-debug",
+      "description": "linux-debug build using Ninja generator",
 
-        {
-            "name": "win-release",
-            "displayName": "win-release",
-            "description": "win-release build using Ninja generator",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cmakeExecutable": "cmake",
 
-            "configurePreset": "win-release"
-        },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
 
-        {
-            "name": "linux-debug",
-            "displayName": "linux-debug",
-            "description": "linux-debug build using Ninja generator",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++",
 
-            "configurePreset": "linux-debug"            
-        }
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
 
-    ]
+  "buildPresets": [
+    {
+      "name": "win-debug",
+      "displayName": "win-debug",
+      "description": "win-debug build using Ninja generator",
+
+      "configurePreset": "win-debug"
+    },
+
+    {
+      "name": "win-release",
+      "displayName": "win-release",
+      "description": "win-release build using Ninja generator",
+
+      "configurePreset": "win-release"
+    },
+
+    {
+      "name": "linux-debug",
+      "displayName": "linux-debug",
+      "description": "linux-debug build using Ninja generator",
+
+      "configurePreset": "linux-debug"
+    }
+
+  ]
 }
